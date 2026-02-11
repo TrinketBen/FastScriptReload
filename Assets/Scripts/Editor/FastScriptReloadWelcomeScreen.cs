@@ -27,7 +27,7 @@ namespace FastScriptReload.Editor
             //WARN: the URL can sometimes be adjusted, make sure updated correctly
             return $"{BaseUrl}/updates/fast-script-reload/{userId}?CurrentVersion={versionId}";
         }
-        public static string VersionId = "1.6";
+        public static string VersionId = "1.8";
         private static readonly string ProjectIconName = "ProductIcon64";
         public static readonly string ProjectName = "fast-script-reload";
 
@@ -368,6 +368,8 @@ Use this setting to force lock assemblies via code."
                         {
                             ProductPreferenceBase.RenderGuiAndPersistInput(FastScriptReloadPreference.IsVisualHotReloadIndicationShownInProjectWindow);
                         }
+                        
+                        GUILayout.Space(sectionBreakHeight);
                     }),
                     (UserScriptRewriteOverrides = new ChangeMainViewButton("User Script\r\nRewrite Overrides", (screen) =>
                     {
@@ -548,7 +550,15 @@ This is to ensure dynamically created and loaded assembles are cleared out prope
                             ProductPreferenceBase.RenderGuiAndPersistInput(FastScriptReloadPreference.TriggerDomainReloadIfOverNDynamicallyLoadedAssembles);
                         }
                         GUILayout.Space(10);
-                    }))
+                    })),
+                    new ChangeMainViewButton("Partial Class", (screen) =>
+                    {
+                        using (LayoutHelper.LabelWidth(350))
+                        {
+                            ProductPreferenceBase.RenderGuiAndPersistInput(FastScriptReloadPreference.IsPartialClassSupportEnabled);
+                        }
+                        EditorGUILayout.HelpBox("Partial class support can be file-read heavy which could make FSR slower.", MessageType.Warning);
+                    })
                 }),
                 new GuiSection("Advanced", new List<ClickableElement>
                 {
@@ -774,6 +784,9 @@ CustomPolling - (experimental) watches files by manual polling for changes, slow
         
         public static readonly ToggleProjectEditorPreferenceDefinition IsVisualHotReloadIndicationShownInProjectWindow = new ToggleProjectEditorPreferenceDefinition(
             "Show red / green bar in project window to indicate hot reload state for file", "IsVisualHotReloadIndicationShownInProjectWindow", true);
+        
+        public static readonly ToggleProjectEditorPreferenceDefinition IsPartialClassSupportEnabled = new ToggleProjectEditorPreferenceDefinition(
+            "(Experimental) Partial class support", "IsPartialClassSupportEnabled", true);
         
         public static readonly ToggleProjectEditorPreferenceDefinition IsForceLockAssembliesViaCode = new ToggleProjectEditorPreferenceDefinition(
             "Force prevent assembly reload during playmode", "IsForceLockAssembliesViaCode", false);
@@ -1053,7 +1066,13 @@ In the meantime, you can exclude any file from Hot-Reload by
         protected static void AutoDetectAndSetShaderMode()
         {
             var usedShaderMode = FastScriptReloadPreference.ShadersMode.Surface;
+            
+#if UNITY_6000_0_OR_NEWER
+            var renderPipelineAsset = GraphicsSettings.defaultRenderPipeline;
+#else
             var renderPipelineAsset = GraphicsSettings.renderPipelineAsset;
+#endif
+
             if (renderPipelineAsset == null)
             {
                 usedShaderMode = FastScriptReloadPreference.ShadersMode.Surface;
